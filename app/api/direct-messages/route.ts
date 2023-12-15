@@ -2,7 +2,7 @@
 
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
-import { Message } from "@prisma/client";
+import { DirectMessage, Message } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 const MESSAGES_BATCH = 10;
@@ -15,31 +15,30 @@ export async function GET(req: Request) {
 
     //tells infinite load from what message to load the next batch of message
     const cursor = searchParams.get("cursor");
-    const channelId = searchParams.get("channelId");
+    const conversationId = searchParams.get("conversationId");
 
     if (!profile) {
-      console.log("no profile");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!channelId) {
-      return new NextResponse("Channel ID missing", { status: 400 });
+    if (!conversationId) {
+      return new NextResponse("conversationId missing", { status: 400 });
     }
 
-    let messages: Message[] = [];
+    let messages: DirectMessage[] = [];
 
     //cursor is the id of the furthest up loaded message
     //start from message passed in infinite query (current message)
     //skip that one and find the next 10
     if (cursor) {
-      messages = await db.message.findMany({
+      messages = await db.directMessage.findMany({
         take: MESSAGES_BATCH,
         skip: 1,
         cursor: {
           id: cursor,
         },
         where: {
-          channelId,
+          conversationId,
         },
         include: {
           member: {
@@ -53,10 +52,10 @@ export async function GET(req: Request) {
         },
       });
     } else {
-      messages = await db.message.findMany({
+      messages = await db.directMessage.findMany({
         take: MESSAGES_BATCH,
         where: {
-          channelId,
+          conversationId,
         },
         include: {
           member: {
@@ -83,7 +82,7 @@ export async function GET(req: Request) {
       nextCursor,
     });
   } catch (error) {
-    console.log("[Messages_get", error);
+    console.log("[DIRECT_Messages_get", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
